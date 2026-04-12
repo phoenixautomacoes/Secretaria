@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build
+frontend/dist/
+frontend/.vite/
+
+# Logs
+*.log
+logs/
+
+# PM2
+.pm2/
+
+# WhatsApp session (contém credenciais)
+baileys_auth/
+
+# Google credentials (contém chaves privadas)
+backend/credentials/
+
+# Prisma
+backend/prisma/migrations/
+
+# OS
+.DS_Store
+Thumbs.db

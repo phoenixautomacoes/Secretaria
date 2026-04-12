@@ -1,0 +1,332 @@
+// =============================================================================
+// Phoenix Automações — Prisma Schema
+// Sistema focado em UMA clínica — sem multi-tenancy
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// USUÁRIOS (equipe da clínica)
+// =============================================================================
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         UserRole   @default(RECEPTIONIST)
+  status       UserStatus @default(ACTIVE)
+  avatarUrl    String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  assignedConversations Conversation[] @relation("AssignedTo")
+
+  @@map("users")
+}
+
+// =============================================================================
+// PACIENTES
+// =============================================================================
+
+model Patient {
+  id            String        @id @default(cuid())
+  name          String
+  phone         String        @unique // número WhatsApp — apenas dígitos com DDI
+  email         String        @default("")
+  source        PatientSource @default(MANUAL)
+  pipelineStage PipelineStage @default(LEAD)
+  status        PatientStatus @default(ACTIVE)
+  notes         String        @default("")
+  tags          Json          @default("[]")
+  optIn         Boolean       @default(true)
+  customFields  Json          @default("{}")
+  deletedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  conversations        Conversation[]
+  appointments         Appointment[]
+  stageHistory         PipelineHistory[]
+  automationExecutions AutomationExecution[]
+
+  @@index([pipelineStage])
+  @@index([status])
+  @@index([phone])
+  @@map("patients")
+}
+
+// =============================================================================
+// CONVERSAS E MENSAGENS
+// =============================================================================
+
+model Conversation {
+  id            String             @id @default(cuid())
+  patientId     String
+  status        ConversationStatus @default(OPEN)
+  mode          ConversationMode   @default(AI)  // AI ou HUMAN
+  assignedToId  String?
+  escalationReason String          @default("")
+  lastMessage   String             @default("")
+  lastMessageAt DateTime           @default(now())
+  unreadCount   Int                @default(0)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  patient    Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  assignedTo User?     @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  messages   Message[]
+
+  @@index([patientId])
+  @@index([status])
+  @@index([mode])
+  @@map("conversations")
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  content        String        @db.Text
+  direction      Direction     @default(IN)
+  senderType     SenderType    @default(PATIENT)
+  senderId       String?       // userId se senderType = HUMAN
+  status         MessageStatus @default(SENT)
+  externalId     String        @default("") // ID da mensagem no WhatsApp
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// =============================================================================
+// AGENDA
+// =============================================================================
+
+model Appointment {
+  id              String            @id @default(cuid())
+  patientId       String
+  title           String            @default("Consulta")
+  notes           String            @default("")
+  startsAt        DateTime
+  endsAt          DateTime
+  duration        Int               @default(60) // minutos
+  status          AppointmentStatus @default(PENDING)
+  googleEventId   String?           // ID do evento no Google Calendar
+  reminderSent24h Boolean           @default(false)
+  reminderSent1h  Boolean           @default(false)
+  cancelReason    String            @default("")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([startsAt])
+  @@index([status])
+  @@map("appointments")
+}
+
+// =============================================================================
+// PIPELINE
+// =============================================================================
+
+model PipelineHistory {
+  id        String         @id @default(cuid())
+  patientId String
+  fromStage PipelineStage?
+  toStage   PipelineStage
+  movedBy   String         @default("system") // userId | "ai" | "automation" | "system"
+  reason    String         @default("")
+  createdAt DateTime       @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@map("pipeline_history")
+}
+
+// =============================================================================
+// AUTOMAÇÕES
+// =============================================================================
+
+model AutomationRule {
+  id           String            @id @default(cuid())
+  name         String
+  description  String            @default("")
+  trigger      AutomationTrigger
+  conditions   Json              @default("[]") // [{field, operator, value}]
+  actions      Json              @default("[]") // [{type, config}]
+  delayMinutes Int               @default(0)
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  executions AutomationExecution[]
+
+  @@index([trigger, isActive])
+  @@map("automation_rules")
+}
+
+model AutomationExecution {
+  id          String          @id @default(cuid())
+  ruleId      String
+  patientId   String
+  status      ExecutionStatus @default(PENDING)
+  result      Json?
+  error       String?
+  scheduledAt DateTime
+  executedAt  DateTime?
+  createdAt   DateTime        @default(now())
+
+  rule    AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  patient Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledAt])
+  @@index([patientId])
+  @@map("automation_executions")
+}
+
+// =============================================================================
+// CONFIGURAÇÕES DA CLÍNICA
+// =============================================================================
+
+model ClinicSettings {
+  id             String   @id @default("singleton") // sempre um registro
+  name           String   @default("Minha Clínica")
+  whatsappNumber String   @default("")
+  timezone       String   @default("America/Sao_Paulo")
+  workingHours   Json     @default("{\"start\":\"08:00\",\"end\":\"18:00\",\"days\":[1,2,3,4,5]}")
+  aiEnabled      Boolean  @default(true)
+  systemPrompt   String   @default("") @db.Text
+  updatedAt      DateTime @updatedAt
+
+  @@map("clinic_settings")
+}
+
+// =============================================================================
+// AUDITORIA
+// =============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  ip         String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  ADMIN
+  RECEPTIONIST
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum PatientSource {
+  MANUAL
+  WHATSAPP
+  WEBSITE
+  REFERRAL
+  IMPORT
+}
+
+enum PatientStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum PipelineStage {
+  LEAD
+  QUALIFIED    // Qualificado
+  SCHEDULED    // Agendado
+  NO_SHOW      // No-show
+  ATTENDED     // Compareceu
+  POST_CONSULT // Pós-consulta
+}
+
+enum ConversationStatus {
+  OPEN
+  PENDING_HUMAN
+  WITH_HUMAN
+  CLOSED
+}
+
+enum ConversationMode {
+  AI
+  HUMAN
+}
+
+enum Direction {
+  IN
+  OUT
+}
+
+enum SenderType {
+  PATIENT
+  AI
+  HUMAN
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum AutomationTrigger {
+  PATIENT_QUALIFIED
+  PATIENT_SCHEDULED
+  APPOINTMENT_REMINDER_24H
+  APPOINTMENT_REMINDER_1H
+  NO_RESPONSE_48H
+  APPOINTMENT_NO_SHOW
+  APPOINTMENT_COMPLETED
+  MESSAGE_RECEIVED
+  PIPELINE_STAGE_CHANGED
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
