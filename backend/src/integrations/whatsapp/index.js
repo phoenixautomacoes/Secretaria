@@ -10,6 +10,9 @@ const getProvider = () => {
     const BaileysProvider = require('./baileys.provider');
     provider = new BaileysProvider();
     logger.info('[WhatsApp] Provider: Baileys');
+    provider.connect().catch((err) =>
+      logger.error('[WhatsApp] Erro ao conectar Baileys', { error: err.message })
+    );
   } else {
     const MockProvider = require('./mock.provider');
     provider = new MockProvider();
