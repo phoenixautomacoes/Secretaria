@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/clinica/"
+title = "Clínica Odonto — Painel de Agendamentos"
+version = "1.0.0"
+id = "artifacts/clinica"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/clinica/" ]
+localPort = 20881
+
+[services.development]
+run = "pnpm --filter @workspace/clinica run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/clinica", "run", "build" ]
+publicDir = "artifacts/clinica/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20881"
+BASE_PATH = "/clinica/"
