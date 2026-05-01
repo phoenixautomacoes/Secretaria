@@ -15,19 +15,19 @@
 
 ---
 
-## Passo 2 — Adicionar as senhas do projeto (Secrets)
+## Passo 2 — Adicionar os Secrets do projeto
 
-No menu esquerdo do Replit, clique no **ícone de cadeado 🔒 (Secrets)** e cadastre os 3 itens abaixo.
+No menu esquerdo do Replit, clique no **ícone de cadeado 🔒 (Secrets)** e cadastre os itens abaixo.
 
-> **Peça os valores ao desenvolvedor anterior — são as mesmas senhas que ele usava.**
+| Nome | Valor |
+|------|-------|
+| `N8N_API_KEY` | *(pegar com o desenvolvedor anterior)* |
+| `SESSION_SECRET` | *(pegar com o desenvolvedor anterior)* |
+| `CHATWOOT_TOKEN` | *(pegar com o desenvolvedor anterior)* |
+| `WEBHOOK_SECRET` | `9193b566300d45e1b0722f2d58ada391ed372aa8af04b544` |
+| `VPS_PASSWORD` | *(senha SSH do servidor — pegar com o desenvolvedor anterior)* |
 
-| Nome | O que é |
-|------|---------|
-| `N8N_API_KEY` | Chave de acesso ao n8n |
-| `SESSION_SECRET` | Senha de sessão do painel |
-| `CHATWOOT_TOKEN` | Token de acesso ao Chatwoot |
-
-Para adicionar cada um: clique em **"+ New secret"**, coloque o nome exato da tabela acima, cole o valor e salve.
+Para adicionar cada um: clique em **"+ New secret"**, coloque o nome exato e cole o valor.
 
 ---
 
@@ -47,6 +47,17 @@ Para adicionar cada um: clique em **"+ New secret"**, coloque o nome exato da ta
 
 ---
 
+## Referências do servidor (187.77.255.96)
+
+| Serviço | URL | Credencial |
+|---------|-----|------------|
+| n8n | https://n8n.healthhacks.store | *(pegar com dev anterior)* |
+| Chatwoot | https://chat.healthhacks.store | *(pegar com dev anterior)* |
+| WAHA (WhatsApp API) | https://evo.healthhacks.store | API Key: `WahaApi2026` |
+| WAHA Dashboard | https://evo.healthhacks.store/dashboard | User: `admin` / Pass: `Clinica2026` |
+
+---
+
 ## Pronto! ✅
 
 O servidor com a IA, WhatsApp e agendamentos **já estava funcionando antes e continua funcionando** — você apenas conectou o painel web à mesma estrutura.
@@ -57,6 +68,6 @@ O servidor com a IA, WhatsApp e agendamentos **já estava funcionando antes e co
 
 | Problema | Solução |
 |----------|---------|
-| Painel não abre | Verifique se todos os 3 Secrets foram cadastrados corretamente |
-| IA não responde no WhatsApp | O problema é no servidor — acesse `https://n8n.healthhacks.store` e verifique se os workflows estão ativos |
-| Dados não aparecem no painel | Confirme com o desenvolvedor anterior os valores corretos dos Secrets |
+| Painel não abre | Verifique se todos os Secrets foram cadastrados corretamente |
+| IA não responde no WhatsApp | Acesse `https://n8n.healthhacks.store` e verifique se os workflows estão ativos |
+| Dados não aparecem no painel | Confirme com o desenvolvedor anterior os valores dos Secrets |
